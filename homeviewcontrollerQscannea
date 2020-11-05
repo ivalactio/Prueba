@@ -1,0 +1,161 @@
+//
+//  HomeViewController.swift
+//  prueba3
+//
+//  Created by Sergio Vizcarro on 19/08/2020.
+//  Copyright © 2020 Sergio Vizcarro. All rights reserved.
+//
+
+import UIKit
+import Vision
+//import MLKitTextRecognition  // LA REPUTA Q TE PARIO MAMAHUEBO
+//import VisionKit
+//import FirebaseMLVision
+//import TesseractOCR
+
+final class HomeViewController: UIViewController {
+    
+    // MARK: - VARIABLES
+    
+    @IBOutlet weak var textView: UILabel!
+    //var textRecognizer: VisionTextRecognizer!
+    var request = VNRecognizeTextRequest(completionHandler: nil)
+    
+    @IBOutlet weak var imagePicked: UIImageView!
+    
+    
+    
+    // MARK: - Initialization
+
+    init() {
+        super.init(nibName: nil, bundle: nil)
+        
+    }
+
+    required init?(coder: NSCoder) {
+        
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func viewDidLoad() {
+        
+        super.viewDidLoad()
+        //let vision = Vision.vision()
+        //textRecognizer = vision.onDeviceTextRecognizer()
+    }
+    
+    // MARK: - Actions
+    
+    
+    
+    // Abre la camara (Se bugea al aceptar la foto)
+    @IBAction func openCameraButton(sender: UIButton) {
+        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            
+            let imagePicker = UIImagePickerController()
+            imagePicker.delegate = self
+            imagePicker.sourceType = .camera;
+            imagePicker.allowsEditing = false
+            self.present(imagePicker, animated: true, completion: nil)
+        }
+    }
+    
+
+    
+    
+    
+    // Abre la galeria
+    @IBAction func openPhotoLibraryButton(sender: UIButton) {
+        if UIImagePickerController.isSourceTypeAvailable(.photoLibrary) {
+            let imagePicker = UIImagePickerController()
+            imagePicker.delegate = self
+            imagePicker.sourceType = .photoLibrary;
+            imagePicker.allowsEditing = true
+            self.present(imagePicker, animated: true, completion: nil)
+        }
+    }
+    
+    //MARK: - Text Recognition
+    
+    @IBAction func RecognizeText(_ sender: Any) {
+        setupVisionTextRecognizeImage(image: imagePicked.image)
+    }
+    
+    // MARK: - Métodos
+    
+    // Coloca la imagen
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        if let image = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
+            print("coloco img")
+            imagePicked.image = image
+        }
+    }
+    
+    
+    private func setupVisionTextRecognizeImage(image: UIImage?){
+        print("entramo")
+        var textString = ""
+        
+        
+        request = VNRecognizeTextRequest(completionHandler: {(request, error) in
+            guard let observations = request.results as?[VNRecognizedTextObservation] else {fatalError("recived invalid observation")}
+            for observation in observations{
+                
+                guard let topCandidate = observation.topCandidates(1).first else {print("No candidate")
+                    continue
+                }
+                
+                textString += "\n\(topCandidate.string)"
+                
+                DispatchQueue.main.async {
+                    self.textView.text = textString
+                    print(textString)
+                }
+                
+            }
+        })
+        // add some properties
+        
+        request.customWords = ["cust0m"]
+        request.minimumTextHeight = 0.03125
+        request.recognitionLevel = .accurate
+        request.recognitionLanguages = ["en_US", "es_EU"]
+        request.usesLanguageCorrection = true
+        
+        let requests = [request]
+        
+        // creating request handler
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            guard let img = image?.cgImage else {fatalError("Missing image to scan")}
+            let handle = VNImageRequestHandler(cgImage: img, options: [:])
+            try? handle.perform(requests)
+        }
+        
+        
+        
+    }
+    
+    
+        
+
+ 
+
+    
+    
+}
+
+// MARK: - Extension
+extension HomeViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+    func imagePickerController( picker:UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+        picker.dismiss(animated: true, completion: nil)
+        
+        self.textView.text = ""
+        
+        let image = info[UIImagePickerController.InfoKey.originalImage] as? UIImage
+        self.imagePicked.image = image
+        
+        setupVisionTextRecognizeImage(image: image)
+    }
+}
+

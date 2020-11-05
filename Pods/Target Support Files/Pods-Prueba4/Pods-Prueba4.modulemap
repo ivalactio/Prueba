@@ -1,0 +1,6 @@
+framework module Pods_Prueba4 {
+  umbrella header "Pods-Prueba4-umbrella.h"
+
+  export *
+  module * { export * }
+}
